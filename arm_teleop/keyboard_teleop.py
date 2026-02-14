@@ -13,10 +13,12 @@ class KeyboardTeleop(Node):
         self.delta_pub = self.create_publisher(Vector3, '/arm/teleop_delta', 10)
         self.ori_pub = self.create_publisher(Bool, '/arm/orientation_constraint', 10)
         self.named_pose_pub = self.create_publisher(String, '/arm/named_pose', 10)
+        self.emergency_req_pub = self.create_publisher(Bool, '/arm/emergency_stop_request', 10)
 
         self.step = 0.05
         self.ori_constrained = False
         self.pending_delta = Vector3()
+        self.req_emergency = False
 
 
         self.get_logger().info(
@@ -42,32 +44,18 @@ class KeyboardTeleop(Node):
 
                 delta = Vector3()
 
-                # scale = 3.0
-
                 if key == "w":
                     delta.x = self.step
-                    # delta.x *= scale
-                    # self.pending_delta.x += self.step * scale
                 elif key == "s":
                     delta.x = -self.step
-                    # delta.x *= scale
-                    # self.pending_delta.x -= self.step * scale
                 elif key == "a":
                     delta.y = self.step
-                    # delta.y *= scale
-                    # self.pending_delta.y += self.step * scale
                 elif key == "d":
                     delta.y = -self.step
-                    # delta.y *= scale
-                    # self.pending_delta.y -= self.step * scale
                 elif key == "q":
                     delta.z = self.step
-                    # delta.z *= scale
-                    # self.pending_delta.z += self.step * scale
                 elif key == "e":
                     delta.z = -self.step
-                    # delta.z *= scale
-                    # self.pending_delta.z -= self.step * scale
 
                 elif key == "h":
                     msg = String()
@@ -96,7 +84,6 @@ class KeyboardTeleop(Node):
                     self.get_logger().info("Sent BACK pose")
                     continue
                 
-                
                 elif key == 'c':
                     self.ori_constrained = not self.ori_constrained
                     msg = Bool()
@@ -107,22 +94,21 @@ class KeyboardTeleop(Node):
                     self.get_logger().info(f"Orientation constraint {state}")
                     continue
 
+                elif key == " ":
+                    self.req_emergency = not self.req_emergency
+                    msg = Bool()
+                    msg.data = self.req_emergency
+                    self.emergency_req_pub.publish(msg)
+
+                    state = "ENABLED" if self.req_emergency else "DISABLED"
+                    self.get_logger().info(f"Emergency STOP {state}")
+                    continue
+
                 elif key == '\x1b':
                     self.get_logger().info("exiting teleop")
                     self._stop = True
                     rclpy.shutdown()
                     break
-
-                # elif key == ' ':
-                #     self.delta_pub.publish(self.pending_delta)
-                #     self.get_logger().info(
-                #         f"Executed delta: "
-                #         f"x={self.pending_delta.x:.3f}, "
-                #         f"y={self.pending_delta.y:.3f}, "
-                #         f"z={self.pending_delta.z:.3f}"
-                #     )
-                #     self.pending_delta = Vector3()
-                #     continue
 
                 else:
                     continue
